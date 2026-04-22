@@ -1,7 +1,7 @@
 import axios from 'axios'
 import type { Voice, VoiceSettings, SynthesisJob, SynthesisRequest, Project, CloningJob } from '../types'
 
-const BASE = (import.meta as ImportMeta & { env: Record<string, string> }).env?.VITE_API_BASE_URL
+const BASE = 'http://localhost:8000'
 
 const api = axios.create({
   baseURL: BASE,

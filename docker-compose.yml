@@ -1,5 +1,3 @@
-version: "3.9"
-
 x-backend-common: &backend-common
   build:
     context: ./backend
@@ -35,7 +33,7 @@ x-worker-common: &worker-common
 
 services:
 
-  # ── Frontend ────────────────────────────────────────────────────────────────
+  # ── Frontend ─────────────────────────────────────────────────────────────────
   frontend:
     build:
       context: ./frontend
@@ -43,20 +41,21 @@ services:
     ports:
       - "5173:5173"
     environment:
-      - VITE_API_BASE_URL=http://localhost:8000
+      - VITE_API_BASE_URL=
     depends_on:
       - backend
     networks:
       - voiceforge
     restart: unless-stopped
 
-  # ── Backend API ─────────────────────────────────────────────────────────────
+  # ── Backend API ───────────────────────────────────────────────────────────────
   backend:
     <<: *backend-common
     ports:
       - "8000:8000"
     environment:
       - DATABASE_URL=postgresql+asyncpg://voiceforge:voiceforge@postgres:5432/voiceforge
+      - SYNC_DATABASE_URL=postgresql+psycopg2://voiceforge:voiceforge@postgres:5432/voiceforge
       - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/1
@@ -69,7 +68,7 @@ services:
       start_period: 40s
     restart: unless-stopped
 
-  # ── Celery Worker — Synthesis ────────────────────────────────────────────────
+  # ── Celery Worker — Synthesis ─────────────────────────────────────────────────
   worker-synthesis:
     <<: *worker-common
     command: >
@@ -80,13 +79,13 @@ services:
       --hostname=worker-synthesis@%h
     environment:
       - DATABASE_URL=postgresql+asyncpg://voiceforge:voiceforge@postgres:5432/voiceforge
+      - SYNC_DATABASE_URL=postgresql+psycopg2://voiceforge:voiceforge@postgres:5432/voiceforge
       - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/1
       - MLFLOW_TRACKING_URI=http://mlflow:5000
-      - OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES
 
-  # ── Celery Worker — Cloning ──────────────────────────────────────────────────
+  # ── Celery Worker — Cloning ───────────────────────────────────────────────────
   worker-cloning:
     <<: *worker-common
     command: >
@@ -97,11 +96,11 @@ services:
       --hostname=worker-cloning@%h
     environment:
       - DATABASE_URL=postgresql+asyncpg://voiceforge:voiceforge@postgres:5432/voiceforge
+      - SYNC_DATABASE_URL=postgresql+psycopg2://voiceforge:voiceforge@postgres:5432/voiceforge
       - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/1
       - MLFLOW_TRACKING_URI=http://mlflow:5000
-      - OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES
 
   # ── Flower — Celery Monitor ───────────────────────────────────────────────────
   flower:
@@ -150,22 +149,19 @@ services:
       retries: 5
     restart: unless-stopped
 
-  # ── MLflow ────────────────────────────────────────────────────────────────────
+  # ── MLflow — uses SQLite (no postgres dependency) ─────────────────────────────
   mlflow:
     image: ghcr.io/mlflow/mlflow:v2.14.3
     command: >
       mlflow server
       --host 0.0.0.0
       --port 5000
-      --backend-store-uri postgresql://voiceforge:voiceforge@postgres:5432/mlflow
+      --backend-store-uri sqlite:////mlflow/mlflow.db
       --default-artifact-root /mlflow/artifacts
     volumes:
       - mlflow_artifacts:/mlflow/artifacts
     ports:
-      - "5000:5000"
-    depends_on:
-      postgres:
-        condition: service_healthy
+      - "5001:5000"
     networks:
       - voiceforge
     restart: unless-stopped
