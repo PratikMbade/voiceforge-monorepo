@@ -3,10 +3,11 @@ from typing import Optional, Dict, Any
 from datetime import datetime
 from app.models.project import JobStatus
 from app.schemas.voice import VoiceSettings
-from pydantic import BaseModel, Field, model_validator
+from pydantic import model_validator
 
 
 # ─── Synthesis ──────────────────────────────────────────────────────────────
+
 
 class SynthesisRequest(BaseModel):
     text: str = Field(..., min_length=1, max_length=5000)
@@ -33,6 +34,7 @@ class SynthesisResponse(BaseModel):
             self.job_id = self.id
         return self
 
+
 class SynthesisJobDetail(SynthesisResponse):
     text: str
     voice_id: str
@@ -44,6 +46,7 @@ class SynthesisJobDetail(SynthesisResponse):
 
 
 # ─── Projects ────────────────────────────────────────────────────────────────
+
 
 class ProjectCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=200)
@@ -71,6 +74,7 @@ class ProjectResponse(BaseModel):
 
 
 # ─── Voice Cloning ───────────────────────────────────────────────────────────
+
 
 class CloningJobResponse(BaseModel):
     job_id: str

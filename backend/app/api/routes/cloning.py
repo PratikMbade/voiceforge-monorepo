@@ -1,6 +1,5 @@
 import os
 import uuid
-import shutil
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status
@@ -11,7 +10,6 @@ from app.core.config import settings
 from app.models.voice import Voice
 from app.models.project import JobStatus
 from app.schemas.synthesis import CloningJobResponse
-from app.schemas.voice import VoiceResponse
 from app.tasks.cloning_tasks import run_voice_cloning
 
 router = APIRouter()
@@ -20,7 +18,9 @@ logger = logging.getLogger(__name__)
 MAX_UPLOAD_BYTES = settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024
 
 
-@router.post("", response_model=CloningJobResponse, status_code=status.HTTP_202_ACCEPTED)
+@router.post(
+    "", response_model=CloningJobResponse, status_code=status.HTTP_202_ACCEPTED
+)
 async def clone_voice(
     name: str = Form(...),
     description: str = Form(""),
@@ -37,7 +37,7 @@ async def clone_voice(
         raise HTTPException(
             status_code=422,
             detail=f"Unsupported audio type: {audio_file.content_type}. "
-                   f"Allowed: {settings.ALLOWED_AUDIO_TYPES}",
+            f"Allowed: {settings.ALLOWED_AUDIO_TYPES}",
         )
 
     # Save uploaded file
@@ -83,6 +83,7 @@ async def clone_voice(
     logger.info(f"Cloning job dispatched for voice {voice.id} (task={task.id})")
 
     from datetime import datetime, timezone
+
     return CloningJobResponse(
         job_id=task.id,
         voice_id=voice.id,
@@ -96,6 +97,7 @@ async def clone_voice(
 async def get_cloning_status(task_id: str):
     """Poll Celery task status for a cloning job."""
     from app.core.celery_app import celery_app
+
     task = celery_app.AsyncResult(task_id)
 
     state_map = {
@@ -121,7 +123,9 @@ async def delete_cloned_voice(voice_id: str, db: AsyncSession = Depends(get_db))
     if not voice:
         raise HTTPException(status_code=404, detail="Voice not found")
     if voice.category != "cloned":
-        raise HTTPException(status_code=400, detail="Can only delete cloned voices via this endpoint")
+        raise HTTPException(
+            status_code=400, detail="Can only delete cloned voices via this endpoint"
+        )
 
     for path in [voice.sample_path, voice.embedding_path]:
         if path and os.path.exists(path):
@@ -138,6 +142,7 @@ async def _ensure_wav(audio_path: str) -> str:
     wav_path = audio_path.rsplit(".", 1)[0] + ".wav"
     try:
         from pydub import AudioSegment  # type: ignore
+
         audio = AudioSegment.from_file(audio_path)
         audio.export(wav_path, format="wav")
         os.remove(audio_path)

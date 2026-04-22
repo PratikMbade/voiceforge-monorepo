@@ -1,16 +1,16 @@
-import pytest
 import pytest_asyncio
 from httpx import AsyncClient, ASGITransport
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 
 from app.main import app
 from app.core.database import Base, get_db
-from app.core.config import settings
 
 TEST_DATABASE_URL = "sqlite+aiosqlite:///./test.db"
 
 test_engine = create_async_engine(TEST_DATABASE_URL, echo=False)
-TestSession = async_sessionmaker(test_engine, class_=AsyncSession, expire_on_commit=False)
+TestSession = async_sessionmaker(
+    test_engine, class_=AsyncSession, expire_on_commit=False
+)
 
 
 @pytest_asyncio.fixture(scope="session", autouse=True)
@@ -34,6 +34,7 @@ async def db_session():
 @pytest_asyncio.fixture
 async def client(db_session: AsyncSession):
     """Async test client with DB dependency overridden."""
+
     async def override_get_db():
         yield db_session
 
@@ -50,6 +51,7 @@ async def client(db_session: AsyncSession):
 async def sample_voice(db_session: AsyncSession):
     """Create a test voice in DB."""
     from app.models.voice import Voice
+
     voice = Voice(
         id="test-voice-id",
         name="Test Voice",

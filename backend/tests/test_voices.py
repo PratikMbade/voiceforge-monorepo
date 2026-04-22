@@ -16,7 +16,12 @@ async def test_create_voice(client: AsyncClient):
         "name": "Aria",
         "description": "A warm, natural voice",
         "labels": {"accent": "american", "gender": "female", "age": "young"},
-        "settings": {"stability": 0.8, "similarity_boost": 0.9, "style": 0.1, "use_speaker_boost": True},
+        "settings": {
+            "stability": 0.8,
+            "similarity_boost": 0.9,
+            "style": 0.1,
+            "use_speaker_boost": True,
+        },
     }
     response = await client.post("/api/v1/voices", json=payload)
     assert response.status_code == 201
@@ -53,7 +58,12 @@ async def test_update_voice(client: AsyncClient, sample_voice):
 async def test_update_voice_settings(client: AsyncClient, sample_voice):
     response = await client.post(
         f"/api/v1/voices/{sample_voice.id}/settings",
-        json={"stability": 0.5, "similarity_boost": 0.6, "style": 0.2, "use_speaker_boost": False},
+        json={
+            "stability": 0.5,
+            "similarity_boost": 0.6,
+            "style": 0.2,
+            "use_speaker_boost": False,
+        },
     )
     assert response.status_code == 200
     data = response.json()

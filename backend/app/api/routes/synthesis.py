@@ -3,7 +3,7 @@ import logging
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
 
@@ -11,7 +11,11 @@ from app.core.database import get_db
 from app.core.config import settings
 from app.models.project import SynthesisJob, JobStatus
 from app.models.voice import Voice
-from app.schemas.synthesis import SynthesisRequest, SynthesisResponse, SynthesisJobDetail
+from app.schemas.synthesis import (
+    SynthesisRequest,
+    SynthesisResponse,
+    SynthesisJobDetail,
+)
 from app.tasks.synthesis_tasks import run_synthesis
 
 router = APIRouter()
@@ -30,7 +34,9 @@ async def submit_synthesis(
     # Validate voice exists
     voice = await db.get(Voice, request.voice_id)
     if not voice:
-        raise HTTPException(status_code=404, detail=f"Voice '{request.voice_id}' not found")
+        raise HTTPException(
+            status_code=404, detail=f"Voice '{request.voice_id}' not found"
+        )
 
     # Validate text length
     if len(request.text) > settings.MAX_TEXT_LENGTH:

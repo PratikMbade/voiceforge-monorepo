@@ -30,7 +30,7 @@ celery_app.conf.update(
     task_acks_late=True,
     worker_max_tasks_per_child=50,
     result_expires=3600,
-    worker_pool="solo",              # ← solo pool: no fork, fixes macOS MPS crash
+    worker_pool="solo",  # ← solo pool: no fork, fixes macOS MPS crash
     task_routes={
         "app.tasks.synthesis_tasks.*": {"queue": "synthesis"},
         "app.tasks.cloning_tasks.*": {"queue": "cloning"},

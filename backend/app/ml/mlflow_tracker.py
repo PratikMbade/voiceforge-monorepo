@@ -1,6 +1,5 @@
 import logging
 from typing import Optional, Dict, Any
-from functools import wraps
 
 from app.core.config import settings
 
@@ -18,6 +17,7 @@ class MLflowTracker:
         if cls._client is None:
             try:
                 import mlflow  # type: ignore
+
                 mlflow.set_tracking_uri(settings.MLFLOW_TRACKING_URI)
                 mlflow.set_experiment(settings.MLFLOW_EXPERIMENT_NAME)
                 cls._client = mlflow
@@ -45,17 +45,21 @@ class MLflowTracker:
 
         try:
             with client.start_run(run_name=f"synthesis_{job_id[:8]}"):
-                client.log_params({
-                    "job_id": job_id,
-                    "voice_id": voice_id,
-                    "model_id": model_id,
-                })
-                client.log_metrics({
-                    "text_length": text_length,
-                    "audio_duration_s": duration_seconds,
-                    "synthesis_latency_s": latency_seconds,
-                    "chars_per_second": text_length / max(latency_seconds, 0.001),
-                })
+                client.log_params(
+                    {
+                        "job_id": job_id,
+                        "voice_id": voice_id,
+                        "model_id": model_id,
+                    }
+                )
+                client.log_metrics(
+                    {
+                        "text_length": text_length,
+                        "audio_duration_s": duration_seconds,
+                        "synthesis_latency_s": latency_seconds,
+                        "chars_per_second": text_length / max(latency_seconds, 0.001),
+                    }
+                )
         except Exception as e:
             logger.warning(f"MLflow logging failed (non-fatal): {e}")
 
@@ -75,11 +79,13 @@ class MLflowTracker:
         try:
             with client.start_run(run_name=f"cloning_{voice_id[:8]}"):
                 client.log_params({"voice_id": voice_id})
-                client.log_metrics({
-                    "input_audio_duration_s": audio_duration,
-                    "embedding_quality_score": quality_score,
-                    "processing_time_s": processing_time,
-                })
+                client.log_metrics(
+                    {
+                        "input_audio_duration_s": audio_duration,
+                        "embedding_quality_score": quality_score,
+                        "processing_time_s": processing_time,
+                    }
+                )
         except Exception as e:
             logger.warning(f"MLflow logging failed (non-fatal): {e}")
 

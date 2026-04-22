@@ -6,20 +6,26 @@ from httpx import AsyncClient
 @pytest.mark.asyncio
 async def test_submit_synthesis_voice_not_found(client: AsyncClient):
     """Should 404 if voice doesn't exist."""
-    response = await client.post("/api/v1/synthesis", json={
-        "text": "Hello world",
-        "voice_id": "nonexistent-voice",
-    })
+    response = await client.post(
+        "/api/v1/synthesis",
+        json={
+            "text": "Hello world",
+            "voice_id": "nonexistent-voice",
+        },
+    )
     assert response.status_code == 404
 
 
 @pytest.mark.asyncio
 async def test_submit_synthesis_text_too_long(client: AsyncClient, sample_voice):
     """Should 422 if text exceeds max length."""
-    response = await client.post("/api/v1/synthesis", json={
-        "text": "a" * 6000,
-        "voice_id": sample_voice.id,
-    })
+    response = await client.post(
+        "/api/v1/synthesis",
+        json={
+            "text": "a" * 6000,
+            "voice_id": sample_voice.id,
+        },
+    )
     assert response.status_code == 422
 
 
@@ -31,11 +37,14 @@ async def test_submit_synthesis_success(client: AsyncClient, sample_voice):
         mock_result.id = "celery-task-123"
         mock_task.apply_async.return_value = mock_result
 
-        response = await client.post("/api/v1/synthesis", json={
-            "text": "Hello, this is a test synthesis.",
-            "voice_id": sample_voice.id,
-            "model_id": "eleven_multilingual_v2",
-        })
+        response = await client.post(
+            "/api/v1/synthesis",
+            json={
+                "text": "Hello, this is a test synthesis.",
+                "voice_id": sample_voice.id,
+                "model_id": "eleven_multilingual_v2",
+            },
+        )
 
     assert response.status_code == 202
     data = response.json()

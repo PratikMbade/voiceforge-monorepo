@@ -1,6 +1,4 @@
 import os
-import pytest
-import tempfile
 import struct
 import wave
 import numpy as np
@@ -16,7 +14,10 @@ def make_wav(path: str, duration_sec: float = 3.0, sample_rate: int = 22050):
         wf.setnchannels(1)
         wf.setsampwidth(2)
         wf.setframerate(sample_rate)
-        samples = [int(500 * np.sin(2 * np.pi * 440 * i / sample_rate)) for i in range(num_samples)]
+        samples = [
+            int(500 * np.sin(2 * np.pi * 440 * i / sample_rate))
+            for i in range(num_samples)
+        ]
         wf.writeframes(struct.pack(f"<{num_samples}h", *samples))
 
 
@@ -29,11 +30,11 @@ class TestTTSEngine:
     def test_mock_synthesis(self, tmp_path):
         """Engine should produce a WAV file in mock mode."""
         engine = TTSEngine()
-        engine._is_loaded = True   # Skip actual model loading
-        engine._tts = None         # Force mock mode
+        engine._is_loaded = True  # Skip actual model loading
+        engine._tts = None  # Force mock mode
 
-        output_path = str(tmp_path / "out.wav")
         import unittest.mock as mock
+
         with mock.patch.object(engine, "_generate_mock_audio") as mock_gen:
             mock_gen.side_effect = lambda p, **kw: make_wav(p, 2.0)
             audio_path, duration = engine.synthesize(

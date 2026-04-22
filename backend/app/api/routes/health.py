@@ -41,6 +41,7 @@ async def readiness_check(db: AsyncSession = Depends(get_db)) -> Dict[str, Any]:
     # Redis / Celery broker
     try:
         import redis  # type: ignore
+
         r = redis.from_url(settings.REDIS_URL, socket_connect_timeout=2)
         r.ping()
         checks["redis"] = "ok"
@@ -51,11 +52,12 @@ async def readiness_check(db: AsyncSession = Depends(get_db)) -> Dict[str, Any]:
     # MLflow (non-critical)
     try:
         import httpx  # type: ignore
+
         async with httpx.AsyncClient(timeout=2) as client:
             resp = await client.get(f"{settings.MLFLOW_TRACKING_URI}/health")
             checks["mlflow"] = "ok" if resp.status_code == 200 else "unreachable"
     except Exception:
-        checks["mlflow"] = "unreachable"   # non-critical, don't degrade
+        checks["mlflow"] = "unreachable"  # non-critical, don't degrade
 
     return {
         "status": overall,

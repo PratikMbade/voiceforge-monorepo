@@ -2,8 +2,8 @@ import os
 import time
 import logging
 from datetime import datetime, timezone
+from typing import Optional
 
-from celery import shared_task
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -95,12 +95,11 @@ def run_synthesis(self, job_id: str):
             raise self.retry(exc=exc)
 
 
-from typing import Optional
-
 def _get_voice_sample(voice_id: str) -> Optional[str]:
     """Fetch speaker wav path for a voice, if it's a cloned voice."""
     with SyncSession() as session:
         from app.models.voice import Voice
+
         voice = session.get(Voice, voice_id)
         if voice and voice.sample_path and os.path.exists(voice.sample_path):
             return voice.sample_path

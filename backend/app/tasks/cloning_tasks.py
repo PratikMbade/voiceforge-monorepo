@@ -1,6 +1,5 @@
 import time
 import logging
-from datetime import datetime, timezone
 
 from app.core.celery_app import celery_app
 from app.ml.cloning_engine import cloning_engine
@@ -28,7 +27,6 @@ def run_voice_cloning(self, voice_id: str, audio_path: str):
     from sqlalchemy.orm import sessionmaker
     from app.core.config import settings
     from app.models.voice import Voice
-    from app.models.project import JobStatus
 
     sync_engine = create_engine(settings.DATABASE_URL.replace("+aiosqlite", ""))
     SyncSession = sessionmaker(sync_engine)
@@ -57,6 +55,7 @@ def run_voice_cloning(self, voice_id: str, audio_path: str):
 
             # Log to MLflow
             import wave
+
             with wave.open(audio_path, "r") as wf:
                 audio_duration = wf.getnframes() / float(wf.getframerate())
 
@@ -67,7 +66,9 @@ def run_voice_cloning(self, voice_id: str, audio_path: str):
                 processing_time=elapsed,
             )
 
-            logger.info(f"✅ Voice cloning done for {voice_id} in {elapsed:.2f}s (quality={quality_score})")
+            logger.info(
+                f"✅ Voice cloning done for {voice_id} in {elapsed:.2f}s (quality={quality_score})"
+            )
             return {
                 "status": "completed",
                 "voice_id": voice_id,

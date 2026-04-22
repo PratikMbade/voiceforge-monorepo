@@ -41,6 +41,7 @@ class TTSEngine:
 
         try:
             from TTS.api import TTS  # type: ignore
+
             model = model_name or settings.TTS_MODEL
             logger.info(f"[PID {current_pid}] Loading TTS model: {model}")
 
@@ -135,6 +136,7 @@ class TTSEngine:
         """Fallback: sine-wave beep when TTS is unavailable."""
         import wave
         import struct
+
         sample_rate = settings.AUDIO_SAMPLE_RATE
         num_samples = int(sample_rate * duration_sec)
         with wave.open(output_path, "w") as wf:
@@ -151,6 +153,7 @@ class TTSEngine:
         """Get WAV duration in seconds."""
         try:
             import wave
+
             with wave.open(audio_path, "r") as wf:
                 return wf.getnframes() / float(wf.getframerate())
         except Exception:

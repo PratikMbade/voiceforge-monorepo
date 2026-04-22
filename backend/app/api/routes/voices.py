@@ -1,14 +1,11 @@
 import os
-import uuid
-import shutil
 import logging
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.core.database import get_db
-from app.core.config import settings
 from app.models.voice import Voice
 from app.schemas.voice import VoiceCreate, VoiceUpdate, VoiceResponse, VoiceSettings
 

@@ -4,11 +4,14 @@ from httpx import AsyncClient
 
 @pytest.mark.asyncio
 async def test_create_project(client: AsyncClient):
-    response = await client.post("/api/v1/projects", json={
-        "name": "My Audiobook",
-        "description": "Chapter narrations",
-        "default_model_id": "eleven_multilingual_v2",
-    })
+    response = await client.post(
+        "/api/v1/projects",
+        json={
+            "name": "My Audiobook",
+            "description": "Chapter narrations",
+            "default_model_id": "eleven_multilingual_v2",
+        },
+    )
     assert response.status_code == 201
     data = response.json()
     assert data["name"] == "My Audiobook"
@@ -37,7 +40,9 @@ async def test_update_project(client: AsyncClient):
     create_resp = await client.post("/api/v1/projects", json={"name": "Old Name"})
     project_id = create_resp.json()["id"]
 
-    update_resp = await client.patch(f"/api/v1/projects/{project_id}", json={"name": "New Name"})
+    update_resp = await client.patch(
+        f"/api/v1/projects/{project_id}", json={"name": "New Name"}
+    )
     assert update_resp.status_code == 200
     assert update_resp.json()["name"] == "New Name"
 

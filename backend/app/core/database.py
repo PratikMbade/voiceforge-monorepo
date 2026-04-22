@@ -25,6 +25,7 @@ class Base(DeclarativeBase):
 async def init_db():
     """Create all tables on startup."""
     from app.models import voice, project, synthesis_job  # noqa: F401 - import models to register them
+
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     logger.info("✅ Database tables created")

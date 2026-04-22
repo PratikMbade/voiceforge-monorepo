@@ -7,7 +7,12 @@ from sqlalchemy import select, desc
 
 from app.core.database import get_db
 from app.models.project import Project, SynthesisJob
-from app.schemas.synthesis import ProjectCreate, ProjectUpdate, ProjectResponse, SynthesisJobDetail
+from app.schemas.synthesis import (
+    ProjectCreate,
+    ProjectUpdate,
+    ProjectResponse,
+    SynthesisJobDetail,
+)
 
 router = APIRouter()
 logger = logging.getLogger(__name__)

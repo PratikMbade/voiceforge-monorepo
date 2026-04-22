@@ -29,6 +29,7 @@ class VoiceCloningEngine:
             return
         try:
             from resemblyzer import VoiceEncoder  # type: ignore
+
             self._encoder = VoiceEncoder()
             self._is_loaded = True
             logger.info("✅ Voice encoder loaded")
@@ -51,6 +52,7 @@ class VoiceCloningEngine:
         try:
             if self._encoder is not None:
                 from resemblyzer import preprocess_wav  # type: ignore
+
                 wav = preprocess_wav(audio_path)
                 embedding = self._encoder.embed_utterance(wav)
                 np.save(embedding_path, embedding)
@@ -74,7 +76,9 @@ class VoiceCloningEngine:
         try:
             e1 = np.load(embedding_path_1)
             e2 = np.load(embedding_path_2)
-            similarity = float(np.dot(e1, e2) / (np.linalg.norm(e1) * np.linalg.norm(e2)))
+            similarity = float(
+                np.dot(e1, e2) / (np.linalg.norm(e1) * np.linalg.norm(e2))
+            )
             return max(0.0, min(1.0, similarity))
         except Exception as e:
             logger.error(f"Similarity computation failed: {e}")
@@ -89,15 +93,22 @@ class VoiceCloningEngine:
         """
         try:
             import wave
+
             with wave.open(audio_path, "r") as wav_file:
                 frames = wav_file.getnframes()
                 rate = wav_file.getframerate()
                 duration = frames / float(rate)
 
             if duration < settings.CLONING_MIN_AUDIO_SECONDS:
-                return False, f"Audio too short: {duration:.1f}s (min {settings.CLONING_MIN_AUDIO_SECONDS}s)"
+                return (
+                    False,
+                    f"Audio too short: {duration:.1f}s (min {settings.CLONING_MIN_AUDIO_SECONDS}s)",
+                )
             if duration > settings.CLONING_MAX_AUDIO_SECONDS:
-                return False, f"Audio too long: {duration:.1f}s (max {settings.CLONING_MAX_AUDIO_SECONDS}s)"
+                return (
+                    False,
+                    f"Audio too long: {duration:.1f}s (max {settings.CLONING_MAX_AUDIO_SECONDS}s)",
+                )
 
             return True, f"Valid audio ({duration:.1f}s)"
 

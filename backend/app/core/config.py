@@ -56,7 +56,13 @@ class Settings(BaseSettings):
 
     # File Storage
     MAX_UPLOAD_SIZE_MB: int = 50
-    ALLOWED_AUDIO_TYPES: List[str] = ["audio/wav", "audio/mp3", "audio/mpeg", "audio/ogg", "audio/flac"]
+    ALLOWED_AUDIO_TYPES: List[str] = [
+        "audio/wav",
+        "audio/mp3",
+        "audio/mpeg",
+        "audio/ogg",
+        "audio/flac",
+    ]
 
     # Task queue
     TASK_TIME_LIMIT: int = 300  # 5 min per task
@@ -65,8 +71,7 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         case_sensitive = True
-        extra = "ignore"        # ← add this line
-
+        extra = "ignore"  # ← add this line
 
 
 settings = Settings()
