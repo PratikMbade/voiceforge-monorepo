@@ -1,4 +1,3 @@
-cat > voiceforge-monorepo/.gitignore << 'EOF'
 # Python
 __pycache__/
 *.pyc
@@ -15,13 +14,14 @@ backend/.env
 *.db
 *.sqlite
 
-# ML Models — too large for git
-models/
+# ML Models — too large for git (only ignore top-level models/ folder)
+backend/models/
 *.pt
 *.pth
 *.ckpt
 *.npy
 storage/
+backend/storage/
 
 # Node
 node_modules/
@@ -41,4 +41,3 @@ test-results.xml
 # IDEs
 .vscode/
 .idea/
-EOF
