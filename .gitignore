@@ -1,0 +1,44 @@
+cat > voiceforge-monorepo/.gitignore << 'EOF'
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+
+# Environment files — NEVER commit these
+.env
+backend/.env
+
+# Database
+*.db
+*.sqlite
+
+# ML Models — too large for git
+models/
+*.pt
+*.pth
+*.ckpt
+*.npy
+storage/
+
+# Node
+node_modules/
+frontend/dist/
+frontend/.vite/
+
+# Test artifacts
+.coverage
+coverage.xml
+htmlcov/
+test-results.xml
+.pytest_cache/
+
+# macOS
+.DS_Store
+
+# IDEs
+.vscode/
+.idea/
+EOF

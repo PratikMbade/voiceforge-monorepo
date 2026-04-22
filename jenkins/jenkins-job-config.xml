@@ -1,0 +1,161 @@
+<?xml version='1.1' encoding='UTF-8'?>
+<project>
+  <description>VoiceForge TTS Platform — CI/CD Freestyle Job</description>
+  <keepDependencies>false</keepDependencies>
+
+  <scm class="hudson.plugins.git.GitSCM">
+    <configVersion>2</configVersion>
+    <userRemoteConfigs>
+      <hudson.plugins.git.UserRemoteConfig>
+        <url>https://github.com/YOUR_USERNAME/voiceforge.git</url>
+        <credentialsId>github-credentials</credentialsId>
+      </hudson.plugins.git.UserRemoteConfig>
+    </userRemoteConfigs>
+    <branches>
+      <hudson.plugins.git.BranchSpec><name>*/main</name></hudson.plugins.git.BranchSpec>
+      <hudson.plugins.git.BranchSpec><name>*/develop</name></hudson.plugins.git.BranchSpec>
+    </branches>
+    <doGenerateSubmoduleConfigurations>false</doGenerateSubmoduleConfigurations>
+    <extensions/>
+  </scm>
+
+  <triggers>
+    <com.cloudbees.jenkins.GitHubPushTrigger plugin="github">
+      <spec></spec>
+    </com.cloudbees.jenkins.GitHubPushTrigger>
+    <hudson.triggers.SCMTrigger>
+      <spec>H/5 * * * *</spec>
+      <ignorePostCommitHooks>false</ignorePostCommitHooks>
+    </hudson.triggers.SCMTrigger>
+  </triggers>
+
+  <builders>
+    <hudson.tasks.Shell>
+      <command>
+#!/bin/bash
+set -e
+
+echo "================================================"
+echo "  VoiceForge Build #${BUILD_NUMBER}"
+echo "  Branch : ${GIT_BRANCH}"
+echo "  Commit : ${GIT_COMMIT:0:8}"
+echo "================================================"
+
+# ── BACKEND ──────────────────────────────────────────
+echo ""
+echo ">>> BACKEND: Install"
+cd backend
+python3 -m venv venv
+. venv/bin/activate
+pip install --upgrade pip --quiet
+pip install -r requirements.txt --quiet
+pip install ruff --quiet
+
+echo ""
+echo ">>> BACKEND: Lint"
+ruff check app/ tests/
+ruff format --check app/ tests/
+
+echo ""
+echo ">>> BACKEND: Tests"
+export DATABASE_URL=sqlite+aiosqlite:///./test.db
+export REDIS_URL=redis://localhost:6379/0
+export CELERY_BROKER_URL=redis://localhost:6379/0
+export CELERY_RESULT_BACKEND=redis://localhost:6379/1
+export ENV=test
+pytest tests/ --junitxml=test-results.xml --cov=app -v
+
+echo "✅ Backend passed"
+
+# ── FRONTEND ─────────────────────────────────────────
+echo ""
+echo ">>> FRONTEND: Install"
+cd ../frontend
+npm ci --silent
+
+echo ""
+echo ">>> FRONTEND: Lint"
+npm run lint
+
+echo ""
+echo ">>> FRONTEND: Build"
+npm run build
+echo "Bundle size: $(du -sh dist/)"
+
+echo "✅ Frontend passed"
+echo ""
+echo "================================================"
+echo "  ✅ ALL STEPS PASSED"
+echo "================================================"
+      </command>
+    </hudson.tasks.Shell>
+  </builders>
+
+  <publishers>
+    <hudson.tasks.junit.JUnitResultArchiver plugin="junit">
+      <testResults>backend/test-results.xml</testResults>
+      <allowEmptyResults>true</allowEmptyResults>
+    </hudson.tasks.junit.JUnitResultArchiver>
+
+    <hudson.tasks.ArtifactArchiver>
+      <artifacts>frontend/dist/**/*</artifacts>
+      <allowEmptyArchive>true</allowEmptyArchive>
+      <onlyIfSuccessful>false</onlyIfSuccessful>
+      <fingerprint>true</fingerprint>
+    </hudson.tasks.ArtifactArchiver>
+
+    <hudson.plugins.emailext.ExtendedEmailPublisher plugin="email-ext">
+      <recipientList>your-email@gmail.com</recipientList>
+      <configuredTriggers>
+        <hudson.plugins.emailext.plugins.trigger.FailureTrigger>
+          <email>
+            <recipientList/>
+            <subject>❌ [VoiceForge] Build #$BUILD_NUMBER FAILED — $GIT_BRANCH</subject>
+            <body><![CDATA[
+<h2 style="color:#ef4444">❌ Build Failed</h2>
+<p><b>Build:</b> #$BUILD_NUMBER</p>
+<p><b>Branch:</b> $GIT_BRANCH</p>
+<p><b>Commit:</b> $GIT_COMMIT</p>
+<p><b>Duration:</b> $BUILD_DURATION</p>
+<a href="$BUILD_URL/console" style="background:#ef4444;color:white;padding:8px 16px;border-radius:4px;text-decoration:none">
+  View Console Output
+</a>
+            ]]></body>
+            <attachBuildLog>true</attachBuildLog>
+            <contentType>text/html</contentType>
+          </email>
+        </hudson.plugins.emailext.plugins.trigger.FailureTrigger>
+        <hudson.plugins.emailext.plugins.trigger.SuccessTrigger>
+          <email>
+            <recipientList/>
+            <subject>✅ [VoiceForge] Build #$BUILD_NUMBER PASSED — $GIT_BRANCH</subject>
+            <body><![CDATA[
+<h2 style="color:#22c55e">✅ Build Passed</h2>
+<p><b>Build:</b> #$BUILD_NUMBER</p>
+<p><b>Branch:</b> $GIT_BRANCH</p>
+<p><b>Duration:</b> $BUILD_DURATION</p>
+<a href="$BUILD_URL" style="background:#22c55e;color:white;padding:8px 16px;border-radius:4px;text-decoration:none">
+  View Build
+</a>
+            ]]></body>
+            <attachBuildLog>false</attachBuildLog>
+            <contentType>text/html</contentType>
+          </email>
+        </hudson.plugins.emailext.plugins.trigger.SuccessTrigger>
+        <hudson.plugins.emailext.plugins.trigger.FixedTrigger>
+          <email>
+            <recipientList/>
+            <subject>✅ [VoiceForge] Build #$BUILD_NUMBER FIXED — $GIT_BRANCH</subject>
+            <body>Build is back to passing after previous failure. See: $BUILD_URL</body>
+            <contentType>text/plain</contentType>
+          </email>
+        </hudson.plugins.emailext.plugins.trigger.FixedTrigger>
+      </configuredTriggers>
+      <contentType>text/html</contentType>
+      <defaultSubject>$DEFAULT_SUBJECT</defaultSubject>
+      <defaultBody>$DEFAULT_CONTENT</defaultBody>
+    </hudson.plugins.emailext.ExtendedEmailPublisher>
+  </publishers>
+
+  <buildWrappers/>
+</project>

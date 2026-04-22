@@ -1,0 +1,283 @@
+{
+  "info": {
+    "name": "VoiceForge API",
+    "description": "Complete test collection for VoiceForge TTS & Voice Cloning API.\n\n**Setup:**\n1. Import this file into Postman\n2. Set the `base_url` variable to your server (default: http://localhost:8000)\n3. Run the Health folder first to verify the server is up\n4. Run folders in order: Health → Voices → Synthesis → Cloning → Projects",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:8000", "type": "string" },
+    { "key": "voice_id", "value": "", "type": "string" },
+    { "key": "job_id",   "value": "", "type": "string" },
+    { "key": "project_id", "value": "", "type": "string" },
+    { "key": "cloning_task_id", "value": "", "type": "string" }
+  ],
+  "item": [
+
+    {
+      "name": "🟢 Health",
+      "item": [
+        {
+          "name": "Liveness",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('status ok', () => pm.expect(pm.response.json().status).to.eql('ok'));"
+          ], "type": "text/javascript" }}],
+          "request": { "method": "GET", "url": "{{base_url}}/api/health" }
+        },
+        {
+          "name": "Readiness (checks DB + Redis)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "const j = pm.response.json();",
+            "pm.test('has checks', () => pm.expect(j.checks).to.be.an('object'));",
+            "pm.test('database ok', () => pm.expect(j.checks.database).to.eql('ok'));",
+            "pm.test('has uptime', () => pm.expect(j.uptime_seconds).to.be.above(0));"
+          ], "type": "text/javascript" }}],
+          "request": { "method": "GET", "url": "{{base_url}}/api/health/ready" }
+        },
+        {
+          "name": "API Docs (should return HTML)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Docs accessible', () => pm.response.to.have.status(200));"
+          ], "type": "text/javascript" }}],
+          "request": { "method": "GET", "url": "{{base_url}}/api/docs" }
+        }
+      ]
+    },
+
+    {
+      "name": "🎙️ Voices",
+      "item": [
+        {
+          "name": "List voices (empty initially)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('returns array', () => pm.expect(pm.response.json()).to.be.an('array'));"
+          ], "type": "text/javascript" }}],
+          "request": { "method": "GET", "url": "{{base_url}}/api/v1/voices" }
+        },
+        {
+          "name": "Create voice",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 201', () => pm.response.to.have.status(201));",
+            "const j = pm.response.json();",
+            "pm.test('has id', () => pm.expect(j.id).to.be.a('string'));",
+            "pm.test('correct name', () => pm.expect(j.name).to.eql('Aria'));",
+            "pm.collectionVariables.set('voice_id', j.id);",
+            "console.log('Saved voice_id:', j.id);"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/api/v1/voices",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Aria\",\n  \"description\": \"Warm, natural American female voice\",\n  \"labels\": {\n    \"accent\": \"american\",\n    \"gender\": \"female\",\n    \"age\": \"young\",\n    \"use_case\": \"narration\"\n  },\n  \"settings\": {\n    \"stability\": 0.75,\n    \"similarity_boost\": 0.85,\n    \"style\": 0.1,\n    \"use_speaker_boost\": true\n  }\n}"
+            }
+          }
+        },
+        {
+          "name": "Get voice by ID",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('id matches', () => pm.expect(pm.response.json().id).to.eql(pm.collectionVariables.get('voice_id')));"
+          ], "type": "text/javascript" }}],
+          "request": { "method": "GET", "url": "{{base_url}}/api/v1/voices/{{voice_id}}" }
+        },
+        {
+          "name": "Update voice",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('name updated', () => pm.expect(pm.response.json().name).to.eql('Aria (Updated)'));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/api/v1/voices/{{voice_id}}",
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Aria (Updated)\",\n  \"description\": \"Updated description\"\n}" }
+          }
+        },
+        {
+          "name": "Update voice settings",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('stability updated', () => pm.expect(pm.response.json().stability).to.eql(0.5));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/api/v1/voices/{{voice_id}}/settings",
+            "body": { "mode": "raw", "raw": "{\n  \"stability\": 0.5,\n  \"similarity_boost\": 0.9,\n  \"style\": 0.0,\n  \"use_speaker_boost\": true\n}" }
+          }
+        },
+        {
+          "name": "Filter voices by category",
+          "request": { "method": "GET", "url": { "raw": "{{base_url}}/api/v1/voices?category=premade", "query": [{ "key": "category", "value": "premade" }] } }
+        },
+        {
+          "name": "Get voice — 404 test",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 404', () => pm.response.to.have.status(404));"
+          ], "type": "text/javascript" }}],
+          "request": { "method": "GET", "url": "{{base_url}}/api/v1/voices/nonexistent-id" }
+        }
+      ]
+    },
+
+    {
+      "name": "🔊 Synthesis",
+      "item": [
+        {
+          "name": "Submit TTS job",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 202 Accepted', () => pm.response.to.have.status(202));",
+            "const j = pm.response.json();",
+            "pm.test('has job_id', () => pm.expect(j.job_id).to.be.a('string'));",
+            "pm.test('status is pending', () => pm.expect(j.status).to.eql('pending'));",
+            "pm.collectionVariables.set('job_id', j.job_id);",
+            "console.log('Saved job_id:', j.job_id);"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/api/v1/synthesis",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"Hello! This is VoiceForge, your AI-powered text to speech platform. The quick brown fox jumped over the lazy dog.\",\n  \"voice_id\": \"{{voice_id}}\",\n  \"model_id\": \"eleven_multilingual_v2\",\n  \"voice_settings\": {\n    \"stability\": 0.75,\n    \"similarity_boost\": 0.85,\n    \"style\": 0.0,\n    \"use_speaker_boost\": true\n  }\n}"
+            }
+          }
+        },
+        {
+          "name": "Poll job status",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "const j = pm.response.json();",
+            "pm.test('has status field', () => pm.expect(j.status).to.be.oneOf(['pending','processing','completed','failed']));",
+            "console.log('Job status:', j.status);",
+            "if (j.status === 'completed') { console.log('Audio URL:', j.audio_url); }"
+          ], "type": "text/javascript" }}],
+          "request": { "method": "GET", "url": "{{base_url}}/api/v1/synthesis/{{job_id}}" }
+        },
+        {
+          "name": "Get synthesis history",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('returns array', () => pm.expect(pm.response.json()).to.be.an('array'));"
+          ], "type": "text/javascript" }}],
+          "request": { "method": "GET", "url": { "raw": "{{base_url}}/api/v1/synthesis/history?limit=10&offset=0", "query": [{ "key": "limit", "value": "10" }, { "key": "offset", "value": "0" }] } }
+        },
+        {
+          "name": "Text too long — 422 test",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 422', () => pm.response.to.have.status(422));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/api/v1/synthesis",
+            "body": { "mode": "raw", "raw": "{\n  \"text\": \"" + "a".repeat(6000) + "\",\n  \"voice_id\": \"{{voice_id}}\"\n}" }
+          }
+        },
+        {
+          "name": "Path traversal protection — 400 test",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Blocks path traversal', () => pm.response.to.have.status(400));"
+          ], "type": "text/javascript" }}],
+          "request": { "method": "GET", "url": "{{base_url}}/api/v1/synthesis/audio/../../../etc/passwd" }
+        }
+      ]
+    },
+
+    {
+      "name": "🧬 Voice Cloning",
+      "item": [
+        {
+          "name": "Upload audio sample & start cloning",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 202', () => pm.response.to.have.status(202));",
+            "const j = pm.response.json();",
+            "pm.test('has job_id', () => pm.expect(j.job_id).to.be.a('string'));",
+            "pm.test('has voice_id', () => pm.expect(j.voice_id).to.be.a('string'));",
+            "pm.collectionVariables.set('cloning_task_id', j.job_id);",
+            "console.log('Cloning task_id:', j.job_id);"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/cloning",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "name", "value": "My Cloned Voice", "type": "text" },
+                { "key": "description", "value": "Cloned from sample audio", "type": "text" },
+                { "key": "audio_file", "type": "file", "src": "/path/to/your/voice_sample.wav",
+                  "description": "⚠️ Replace src with a real WAV file path (6-180 seconds of clean speech)" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Poll cloning status",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "const j = pm.response.json();",
+            "console.log('Cloning status:', j.status);"
+          ], "type": "text/javascript" }}],
+          "request": { "method": "GET", "url": "{{base_url}}/api/v1/cloning/status/{{cloning_task_id}}" }
+        }
+      ]
+    },
+
+    {
+      "name": "📁 Projects",
+      "item": [
+        {
+          "name": "Create project",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 201', () => pm.response.to.have.status(201));",
+            "const j = pm.response.json();",
+            "pm.test('has id', () => pm.expect(j.id).to.be.a('string'));",
+            "pm.collectionVariables.set('project_id', j.id);"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/api/v1/projects",
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"My Audiobook\",\n  \"description\": \"Chapter narrations for my novel\",\n  \"default_voice_id\": \"{{voice_id}}\"\n}" }
+          }
+        },
+        {
+          "name": "List projects",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('returns array', () => pm.expect(pm.response.json()).to.be.an('array'));"
+          ], "type": "text/javascript" }}],
+          "request": { "method": "GET", "url": "{{base_url}}/api/v1/projects" }
+        },
+        {
+          "name": "Get project",
+          "request": { "method": "GET", "url": "{{base_url}}/api/v1/projects/{{project_id}}" }
+        },
+        {
+          "name": "Get project history",
+          "request": { "method": "GET", "url": "{{base_url}}/api/v1/projects/{{project_id}}/history" }
+        },
+        {
+          "name": "Update project",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/api/v1/projects/{{project_id}}",
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"My Audiobook (Updated)\"\n}" }
+          }
+        },
+        {
+          "name": "Delete project",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 204', () => pm.response.to.have.status(204));"
+          ], "type": "text/javascript" }}],
+          "request": { "method": "DELETE", "url": "{{base_url}}/api/v1/projects/{{project_id}}" }
+        }
+      ]
+    }
+  ]
+}

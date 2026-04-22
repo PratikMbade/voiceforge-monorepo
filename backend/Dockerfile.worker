@@ -1,0 +1,47 @@
+# Celery Worker — same base as backend, different CMD
+FROM python:3.11-slim AS builder
+
+WORKDIR /build
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    ffmpeg \
+    libsndfile1 \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+COPY requirements.txt .
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+
+FROM python:3.11-slim AS runtime
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg \
+    libsndfile1 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /opt/venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+RUN groupadd -r worker && useradd -r -g worker worker
+
+COPY --chown=worker:worker . .
+
+RUN mkdir -p storage/voices storage/audio storage/uploads models && \
+    chown -R worker:worker storage models
+
+USER worker
+
+# Two separate workers: one per queue so ML tasks don't block each other
+# Override CMD in docker-compose per service
+CMD ["celery", "-A", "app.core.celery_app", "worker", \
+     "--loglevel=info", \
+     "--queues=synthesis,cloning", \
+     "--concurrency=2", \
+     "--max-tasks-per-child=50"]

@@ -1,0 +1,8 @@
+# Dev-only extras (not in Docker prod image)
+-r requirements.txt
+
+ruff==0.8.1
+mypy==1.13.0
+pre-commit==4.0.1
+ipython==8.18.1                  # last version supporting py3.9
+watchfiles==0.21.0               # 1.x requires Python >=3.10

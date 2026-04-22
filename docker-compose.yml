@@ -1,0 +1,196 @@
+version: "3.9"
+
+x-backend-common: &backend-common
+  build:
+    context: ./backend
+    dockerfile: Dockerfile
+  env_file: ./backend/.env
+  volumes:
+    - backend_storage:/app/storage
+    - model_cache:/app/models
+  depends_on:
+    redis:
+      condition: service_healthy
+    postgres:
+      condition: service_healthy
+  networks:
+    - voiceforge
+
+x-worker-common: &worker-common
+  build:
+    context: ./backend
+    dockerfile: Dockerfile.worker
+  env_file: ./backend/.env
+  volumes:
+    - backend_storage:/app/storage
+    - model_cache:/app/models
+  depends_on:
+    redis:
+      condition: service_healthy
+    postgres:
+      condition: service_healthy
+  networks:
+    - voiceforge
+  restart: unless-stopped
+
+services:
+
+  # ── Frontend ────────────────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_BASE_URL=http://localhost:8000
+    depends_on:
+      - backend
+    networks:
+      - voiceforge
+    restart: unless-stopped
+
+  # ── Backend API ─────────────────────────────────────────────────────────────
+  backend:
+    <<: *backend-common
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://voiceforge:voiceforge@postgres:5432/voiceforge
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+
+  # ── Celery Worker — Synthesis ────────────────────────────────────────────────
+  worker-synthesis:
+    <<: *worker-common
+    command: >
+      celery -A app.core.celery_app worker
+      --loglevel=info
+      --queues=synthesis
+      --pool=solo
+      --hostname=worker-synthesis@%h
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://voiceforge:voiceforge@postgres:5432/voiceforge
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+      - OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES
+
+  # ── Celery Worker — Cloning ──────────────────────────────────────────────────
+  worker-cloning:
+    <<: *worker-common
+    command: >
+      celery -A app.core.celery_app worker
+      --loglevel=info
+      --queues=cloning
+      --pool=solo
+      --hostname=worker-cloning@%h
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://voiceforge:voiceforge@postgres:5432/voiceforge
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+      - OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES
+
+  # ── Flower — Celery Monitor ───────────────────────────────────────────────────
+  flower:
+    <<: *worker-common
+    command: >
+      celery -A app.core.celery_app flower
+      --port=5555
+      --broker=redis://redis:6379/0
+    ports:
+      - "5555:5555"
+
+  # ── PostgreSQL ────────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER:     voiceforge
+      POSTGRES_PASSWORD: voiceforge
+      POSTGRES_DB:       voiceforge
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - voiceforge
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U voiceforge"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ── Redis ─────────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - voiceforge
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ── MLflow ────────────────────────────────────────────────────────────────────
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v2.14.3
+    command: >
+      mlflow server
+      --host 0.0.0.0
+      --port 5000
+      --backend-store-uri postgresql://voiceforge:voiceforge@postgres:5432/mlflow
+      --default-artifact-root /mlflow/artifacts
+    volumes:
+      - mlflow_artifacts:/mlflow/artifacts
+    ports:
+      - "5000:5000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - voiceforge
+    restart: unless-stopped
+
+  # ── Nginx Reverse Proxy ───────────────────────────────────────────────────────
+  nginx:
+    image: nginx:alpine
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - voiceforge
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+  mlflow_artifacts:
+  backend_storage:
+  model_cache:
+
+networks:
+  voiceforge:
+    driver: bridge
