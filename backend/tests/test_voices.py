@@ -16,12 +16,7 @@ async def test_create_voice(client: AsyncClient):
         "name": "Aria",
         "description": "A warm, natural voice",
         "labels": {"accent": "american", "gender": "female", "age": "young"},
-        "settings": {
-            "stability": 0.8,
-            "similarity_boost": 0.9,
-            "style": 0.1,
-            "use_speaker_boost": True,
-        },
+        "settings": {"stability": 0.8, "similarity_boost": 0.9, "style": 0.1, "use_speaker_boost": True},
     }
     response = await client.post("/api/v1/voices", json=payload)
     assert response.status_code == 201
@@ -58,12 +53,7 @@ async def test_update_voice(client: AsyncClient, sample_voice):
 async def test_update_voice_settings(client: AsyncClient, sample_voice):
     response = await client.post(
         f"/api/v1/voices/{sample_voice.id}/settings",
-        json={
-            "stability": 0.5,
-            "similarity_boost": 0.6,
-            "style": 0.2,
-            "use_speaker_boost": False,
-        },
+        json={"stability": 0.5, "similarity_boost": 0.6, "style": 0.2, "use_speaker_boost": False},
     )
     assert response.status_code == 200
     data = response.json()
@@ -73,13 +63,15 @@ async def test_update_voice_settings(client: AsyncClient, sample_voice):
 
 @pytest.mark.asyncio
 async def test_delete_voice(client: AsyncClient, db_session: AsyncSession):
-    # Create a voice to delete
     create_resp = await client.post("/api/v1/voices", json={"name": "To Delete"})
     assert create_resp.status_code == 201
     voice_id = create_resp.json()["id"]
 
     delete_resp = await client.delete(f"/api/v1/voices/{voice_id}")
     assert delete_resp.status_code == 204
+
+    # Expire session cache so next query hits DB
+    db_session.expire_all()
 
     get_resp = await client.get(f"/api/v1/voices/{voice_id}")
     assert get_resp.status_code == 404
