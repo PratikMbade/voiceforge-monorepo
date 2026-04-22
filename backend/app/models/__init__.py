@@ -1,2 +1,2 @@
-from app.models.voice import Voice
-from app.models.project import Project, SynthesisJob, JobStatus
+from app.models.voice import Voice as Voice
+from app.models.project import Project as Project, SynthesisJob as SynthesisJob, JobStatus as JobStatus
