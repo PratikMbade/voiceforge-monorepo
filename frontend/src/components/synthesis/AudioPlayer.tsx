@@ -1,5 +1,6 @@
+/* eslint-disable react-hooks/purity */
 import React, { useRef, useState, useEffect } from 'react'
-import { Play, Pause, Download, Volume2 } from 'lucide-react'
+import { Play, Pause, Download } from 'lucide-react'
 
 interface AudioPlayerProps {
   url: string

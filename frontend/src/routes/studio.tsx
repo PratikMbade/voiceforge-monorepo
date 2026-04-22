@@ -6,7 +6,7 @@ import { synthesisApi, voicesApi } from '../api'
 import { useAppStore } from '../store'
 import { Button, Spinner, Slider, StatusBadge } from '../components/ui'
 import { AudioPlayer } from '../components/synthesis/AudioPlayer'
-import type { SynthesisJob, Voice } from '../types'
+import type { SynthesisJob } from '../types'
 
 const MODELS = [
   { id: 'eleven_multilingual_v2', label: 'Multilingual v2' },

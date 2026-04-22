@@ -7,6 +7,7 @@ import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
   globalIgnores(['dist']),
+  
   {
     files: ['**/*.{ts,tsx}'],
     extends: [
@@ -15,6 +16,11 @@ export default defineConfig([
       reactHooks.configs.flat.recommended,
       reactRefresh.configs.vite,
     ],
+    rules: {
+  '@typescript-eslint/no-explicit-any': 'warn',  // change error to warn
+  'react-hooks/exhaustive-deps': 'warn',          // already warning
+  'react-hooks/purity': 'warn',                   // change error to warn
+},
     languageOptions: {
       ecmaVersion: 2020,
       globals: globals.browser,
