@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+
+  notify-success:
+    name: "Email on Success"
+    runs-on: ubuntu-latest
+    if: success()
+    steps:
+      - name: Send success email
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          secure: false
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "✅ VoiceForge Build PASSED — ${{ github.ref_name }}"
+          to: pratikmbade18@gmail.com
+          from: VoiceForge CI <${{ secrets.MAIL_USERNAME }}>
+          body: |
+            ✅ Build passed!
+            Branch: ${{ github.ref_name }}
+            Commit: ${{ github.sha }}
+            Author: ${{ github.actor }}
+            View: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+  notify-failure:
+    name: "Email on Failure"
+    runs-on: ubuntu-latest
+    if: failure()
+    steps:
+      - name: Send failure email
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          secure: false
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "❌ VoiceForge Build FAILED — ${{ github.ref_name }}"
+          to: pratikmbade18@gmail.com
+          from: VoiceForge CI <${{ secrets.MAIL_USERNAME }}>
+          body: |
+            ❌ Build failed!
+            Branch: ${{ github.ref_name }}
+            Commit: ${{ github.sha }}
+            Author: ${{ github.actor }}
+            View: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
